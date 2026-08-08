@@ -4,3 +4,5 @@ version.h
 *.o
 nsxiv
 icon/img2data
+*.jp2
+result

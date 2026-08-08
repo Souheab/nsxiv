@@ -20,6 +20,10 @@
         system:
         let
           pkgs = pkgsFor system;
+          imlib2WithJp2 = pkgs.imlib2Full.overrideAttrs (old: {
+            buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.openjpeg ];
+            configureFlags = (old.configureFlags or [ ]) ++ [ "--with-j2k" ];
+          });
         in
         {
           default = pkgs.stdenv.mkDerivation {
@@ -32,11 +36,11 @@
               with pkgs;
               [
                 giflib
-                imlib2Full
                 libxft
                 libexif
                 libwebp
               ]
+              ++ [ imlib2WithJp2 ]
               ++ pkgs.lib.optional pkgs.stdenv.hostPlatform.isDarwin pkgs.libinotify-kqueue;
 
             env.NIX_LDFLAGS = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin "-linotify";
