@@ -22,7 +22,7 @@ static const bool TOP_STATUSBAR = false;
 #endif
 #ifdef INCLUDE_IMAGE_CONFIG
 
-/* levels (in percent) to use when zooming via '-' and '+':
+/* levels (in percent) to use when zooming via '-' and '=':
  * (first/last value is used as min/max zoom level)
  */
 static const float zoom_levels[] = {
@@ -117,7 +117,7 @@ static const keymap_t keys[] = {
 	{ ControlMask,  XK_Up,            g_scroll_screen,      DIR_UP },
 	{ ControlMask,  XK_l,             g_scroll_screen,      DIR_RIGHT },
 	{ ControlMask,  XK_Right,         g_scroll_screen,      DIR_RIGHT },
-	{ 0,            XK_plus,          g_zoom,               +1 },
+	{ 0,            XK_plus,          i_set_zoom,           100 },
 	{ 0,            XK_KP_Add,        g_zoom,               +1 },
 	{ 0,            XK_minus,         g_zoom,               -1 },
 	{ 0,            XK_KP_Subtract,   g_zoom,               -1 },
