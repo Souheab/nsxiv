@@ -18,7 +18,7 @@ nsxiv_ldlibs = -lImlib2 -lX11 \
   $(lib_exif_$(HAVE_LIBEXIF)) $(lib_fonts_$(HAVE_LIBFONTS)) \
   $(LDLIBS)
 
-objs = autoreload.o commands.o image.o main.o options.o \
+objs = autoreload.o commands.o help.o image.o main.o options.o \
   thumbs.o util.o window.o
 
 .SUFFIXES:
@@ -37,6 +37,13 @@ nsxiv: $(objs)
 $(objs): Makefile config.mk nsxiv.h config.h commands.h
 options.o: version.h optparse.h
 window.o: icon/data.h utf8.h
+help.o main.o window.o: help.h
+
+check: help.o util.o
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT HUP INT TERM; \
+	$(CC) $(CFLAGS) $(nsxiv_cppflags) -I. tests/help.c help.o util.o \
+	    $(LDFLAGS) -o "$$tmp/help-test" $(nsxiv_ldlibs) && \
+	sh tests/run.sh "$$tmp/help-test"
 
 config.h:
 	@echo "GEN $@"

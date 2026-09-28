@@ -32,6 +32,7 @@ Features
 * Ability to cache thumbnails for fast re-loading
 * Automatically refreshing modified images
 * Customizable keyboard and mouse mappings via `config.h`
+* Searchable keyboard shortcut reference with `?` (requires font support)
 * Scriptability via `key-handler`
 * Displaying image information in status bar via `image-info` & `thumb-info`
 * Customizable window title via `win-title`
@@ -181,6 +182,29 @@ The main method of customizing nsxiv is by setting values for the variables in *
 or by using Xresources as explained in the manual. If these options are not sufficient,
 you may implement your own features by following
 [this guide](https://codeberg.org/nsxiv/nsxiv-extra/src/branch/master/CUSTOMIZATION.md).
+
+Press `?` to search the compiled keyboard bindings for the current mode. Type
+words such as `ctrl zoom` or `rotate 90`; every word must match part of the key
+name or action description, ignoring case. Scroll with Up/Down, Page Up/Page
+Down, or the mouse wheel. Backspace edits the query, Ctrl+U clears it, and Escape
+closes the reference. Enter never runs a command. Queries accept up to 255
+printable ASCII characters; clipboard paste and international text input are
+not supported. Playback pauses until the reference closes.
+
+Existing private `config.h` files are not overwritten. To enable the reference,
+replace the old `XK_question` rotation entry with the following global binding:
+
+```c
+#if HAVE_LIBFONTS
+    { 0, XK_question, g_help, None },
+#endif
+```
+
+The default `?` binding no longer rotates 180 degrees; press `<` or `>` twice
+instead. The reference reflects custom compiled shortcuts, combines multiple
+actions on the same key, and describes unknown custom functions as custom
+commands. External key-handler scripts and mouse bindings are not indexed.
+Builds without font support omit the reference.
 
 Due to our limited [project scope](etc/CONTRIBUTING.md#project-scope), certain features or
 customization cannot be merged into nsxiv mainline. Following the spirit of suckless

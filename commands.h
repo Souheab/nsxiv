@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 /* global */
+bool cg_help(arg_t);
 bool cg_change_gamma(arg_t);
 bool cg_change_brightness(arg_t);
 bool cg_change_contrast(arg_t);
@@ -49,6 +50,7 @@ bool ct_select(arg_t);
 
 #ifdef INCLUDE_MAPPINGS_CONFIG
 /* global */
+#define g_help { cg_help, MODE_ALL }
 #define g_change_gamma { cg_change_gamma, MODE_ALL }
 #define g_change_brightness { cg_change_brightness, MODE_ALL }
 #define g_change_contrast { cg_change_contrast, MODE_ALL }

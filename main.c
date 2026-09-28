@@ -21,6 +21,7 @@
 #define INCLUDE_MAPPINGS_CONFIG
 #include "commands.h"
 #include "config.h"
+#include "help.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -63,6 +64,7 @@ arl_t arl;
 img_t img;
 tns_t tns;
 win_t win;
+help_t help;
 
 appmode_t mode;
 fileinfo_t *files;
@@ -111,6 +113,7 @@ static void cleanup(void)
 	img_close(&img, false);
 	arl_cleanup(&arl);
 	tns_free(&tns);
+	help_free(&help);
 	win_close(&win);
 }
 
@@ -409,7 +412,7 @@ void load_image(int new)
 
 	arl_add(&arl, &files[fileidx]);
 
-	if (img.multi.cnt > 0 && img.multi.animate)
+	if (!help.active && img.multi.cnt > 0 && img.multi.animate)
 		set_timeout(animate, img.multi.frames[img.multi.sel].delay, true);
 	else
 		reset_timeout(animate);
@@ -539,7 +542,7 @@ void redraw(void)
 
 	if (mode == MODE_IMAGE) {
 		img_render(&img);
-		if (img.ss.on) {
+		if (img.ss.on && !help.active) {
 			t = img.ss.delay * 100;
 			if (img.multi.cnt > 0 && img.multi.animate)
 				t = MAX(t, img.multi.length);
@@ -560,6 +563,10 @@ void reset_cursor(void)
 	unsigned int i;
 	cursor_t cursor = CURSOR_NONE;
 
+	if (help.active) {
+		win_set_cursor(&win, CURSOR_ARROW);
+		return;
+	}
 	if (mode == MODE_IMAGE) {
 		for (i = 0; i < ARRLEN(timeouts); i++) {
 			if (timeouts[i].handler == reset_cursor) {
@@ -583,6 +590,8 @@ void reset_cursor(void)
 
 void animate(void)
 {
+	if (help.active)
+		return;
 	if (img_frame_animate(&img)) {
 		set_timeout(animate, img.multi.frames[img.multi.sel].delay, true);
 		redraw();
@@ -591,6 +600,8 @@ void animate(void)
 
 void slideshow(void)
 {
+	if (help.active)
+		return;
 	load_image(fileidx + 1 < filecnt ? fileidx + 1 : 0);
 	redraw();
 }
@@ -729,12 +740,36 @@ static bool process_bindings(const keymap_t *bindings, unsigned int len, KeySym 
 	return dirty;
 }
 
+bool cg_help(arg_t _)
+{
+#if HAVE_LIBFONTS
+	help_open(&help, win.env.dpy, keys, ARRLEN(keys), USED_MODMASK, mode);
+	prefix = 0;
+	reset_timeout(animate);
+	reset_timeout(slideshow);
+	return true;
+#else
+	return false;
+#endif
+}
+
 static void on_keypress(XKeyEvent *kev)
 {
 	unsigned int sh = 0;
 	KeySym ksym, shksym;
 	char dummy, key;
 	bool dirty = false;
+
+	if (help.active) {
+		char text[32];
+		int len = XLookupString(kev, text, sizeof(text), &ksym, NULL);
+
+		help_keypress(&help, ksym, kev->state, text, len);
+		if (!help.active && mode == MODE_IMAGE && img.multi.cnt > 0 && img.multi.animate)
+			set_timeout(animate, img.multi.frames[img.multi.sel].delay, true);
+		redraw();
+		return;
+	}
 
 	XLookupString(kev, &key, 1, &ksym, NULL);
 
@@ -769,6 +804,14 @@ static void on_keypress(XKeyEvent *kev)
 static void on_buttonpress(const XButtonEvent *bev)
 {
 	bool dirty = false;
+
+	if (help.active) {
+		if (bev->button == Button4 || bev->button == Button5) {
+			help_scroll(&help, bev->button == Button4 ? -1 : 1);
+			win_draw(&win);
+		}
+		return;
+	}
 
 	if (mode == MODE_IMAGE) {
 		set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
@@ -847,7 +890,7 @@ static void run(void)
 					discard = ev.type == nextev.type;
 					break;
 				case KeyPress:
-					discard = (nextev.type == KeyPress || nextev.type == KeyRelease) &&
+					discard = !help.active && (nextev.type == KeyPress || nextev.type == KeyRelease) &&
 					          ev.xkey.keycode == nextev.xkey.keycode;
 					break;
 				}

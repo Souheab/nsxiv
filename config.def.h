@@ -99,6 +99,9 @@ static const KeySym KEYHANDLER_ABORT = XK_Escape;
 /* keyboard mappings for image and thumbnail mode: */
 static const keymap_t keys[] = {
 	/* modifiers    key               function              argument */
+#if HAVE_LIBFONTS
+	{ 0,            XK_question,      g_help,               None },
+#endif
 	{ 0,            XK_q,             g_quit,               0 },
 	{ 0,            XK_Q,             g_pick_quit,          0 },
 	{ 0,            XK_Return,        g_switch_mode,        None },
@@ -182,7 +185,6 @@ static const keymap_t keys[] = {
 	{ 0,            XK_E,             i_fit_to_win,         SCALE_HEIGHT },
 	{ 0,            XK_less,          i_rotate,             DEGREE_270 },
 	{ 0,            XK_greater,       i_rotate,             DEGREE_90 },
-	{ 0,            XK_question,      i_rotate,             DEGREE_180 },
 	{ 0,            XK_bar,           i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_underscore,    i_flip,               FLIP_VERTICAL },
 	{ 0,            XK_a,             i_toggle_antialias,   None },

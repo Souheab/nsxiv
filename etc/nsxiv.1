@@ -160,6 +160,16 @@ and exit. Can be used along with
 .SS General
 The following keyboard commands are available in both image and thumbnail modes:
 .TP
+.B ?
+Open the searchable keyboard shortcut reference (requires font support).
+Type words to filter shortcuts and descriptions for the current mode.
+All words must match; matching is case-insensitive and accepts partial words.
+Backspace deletes a character and Ctrl-u clears the search.
+Up/Down, Page Up/Page Down, and the mouse wheel scroll results.
+Escape closes the reference; Enter does not execute commands.
+While the reference is open, viewer commands and mouse actions are blocked,
+and animation and slideshow playback are paused.
+.TP
 .BR 0 \- 9
 Prefix the next command with a number (denoted via
 .IR count ).
@@ -403,9 +413,6 @@ Rotate image counter-clockwise by 90 degrees.
 .TP
 .B >
 Rotate image clockwise by 90 degrees.
-.TP
-.B ?
-Rotate image by 180 degrees.
 .TP
 Flipping:
 .TP

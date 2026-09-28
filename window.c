@@ -20,6 +20,7 @@
 #include "nsxiv.h"
 #define INCLUDE_WINDOW_CONFIG
 #include "config.h"
+#include "help.h"
 #include "icon/data.h"
 
 #include <assert.h>
@@ -67,11 +68,14 @@ static struct {
 #if HAVE_LIBFONTS
 static XftFont *font;
 static double fontsize;
+static Pixmap help_pm;
+static unsigned int help_w, help_h;
+extern help_t help;
 /* utf8 ellipsis "…". the buffer must be at least 4 bytes for utf8_decode() */
 enum { ELLIPSIS_LEN = 3 };
 static const unsigned char ellipsis[4] = { 0xe2, 0x80, 0xa6, 0x0 };
 static int ellipsis_w;
-static int win_draw_text(win_t *, XftDraw *, const XftColor *, int, int, char *, int, int);
+static int win_draw_text(win_t *, XftDraw *, const XftColor *, int, int, const char *, int, int);
 #endif
 
 #if HAVE_LIBFONTS
@@ -346,6 +350,8 @@ CLEANUP void win_close(win_t *win)
 
 	XFreeGC(win->env.dpy, gc);
 #if HAVE_LIBFONTS
+	if (help_pm != None)
+		XFreePixmap(win->env.dpy, help_pm);
 	XftFontClose(win->env.dpy, font);
 #endif
 	XDestroyWindow(win->env.dpy, win->xwin);
@@ -414,10 +420,11 @@ void win_clear(win_t *win)
 
 #if HAVE_LIBFONTS
 static int win_draw_text(win_t *win, XftDraw *d, const XftColor *color,
-                         int x, int y, char *text, int len, int w)
+                         int x, int y, const char *text, int len, int w)
 {
 	int err, tw = 0, warned = 0, danger_zone = w - ellipsis_w;
-	char *t, *next;
+	const char *t, *next;
+	char encoded[4];
 	uint32_t rune;
 	XftFont *f;
 	FcCharSet *fccharset;
@@ -425,7 +432,10 @@ static int win_draw_text(win_t *win, XftDraw *d, const XftColor *color,
 
 	for (t = text; t - text < len; t = next) {
 		err = 0;
-		next = utf8_decode(t, &rune, &err);
+		/* The branchless decoder reads four bytes, even for ASCII. */
+		memset(encoded, 0, sizeof(encoded));
+		memcpy(encoded, t, MIN((size_t)(text + len - t), sizeof(encoded)));
+		next = t + ((char *)utf8_decode(encoded, &rune, &err) - encoded);
 		if (err) {
 			if (!warned)
 				error(0, 0, "error decoding utf8 status-bar text");
@@ -447,7 +457,7 @@ static int win_draw_text(win_t *win, XftDraw *d, const XftColor *color,
 			int remaining_width = TEXTWIDTH(win, t, (text + len) - t);
 			if (tw + remaining_width > w) { /* overflow, print ellipsis */
 				if (tw + ellipsis_w <= w) {
-					win_draw_text(win, d, color, x, y, (char *)ellipsis,
+					win_draw_text(win, d, color, x, y, (const char *)ellipsis,
 					              ELLIPSIS_LEN, ellipsis_w);
 					tw += ellipsis_w;
 				}
@@ -467,6 +477,85 @@ static int win_draw_text(win_t *win, XftDraw *d, const XftColor *color,
 			XftFontClose(win->env.dpy, f);
 	}
 	return tw;
+}
+
+static void help_text(win_t *win, XftDraw *draw, int x, int y, int width, const char *text)
+{
+	if (width > 0)
+		win_draw_text(win, draw, &win->bar_fg, x, y, text, strlen(text), width);
+}
+
+static Pixmap win_draw_help(win_t *win)
+{
+	win_env_t *e = &win->env;
+	XftDraw *draw;
+	XRectangle clip;
+	int line = barheight + 4, pad = 12;
+	int height = MIN(win->h + win->bar.h, 65535u);
+	int w = MIN(win->w, 900u), h = MIN(height, line * 23 + pad * 2);
+	int x, y, left, top, width, keywidth, rows, i;
+	char buf[320];
+	const help_row_t *row;
+
+	if (win->w > 48)
+		w = MIN(win->w - 32, 900u);
+	if (height > 48)
+		h = MIN(h, height - 32);
+	x = ((int)win->w - w) / 2;
+	y = (height - h) / 2;
+	if (help_pm == None || help_w != win->w || help_h != (unsigned int)height) {
+		if (help_pm != None)
+			XFreePixmap(e->dpy, help_pm);
+		help_w = win->w;
+		help_h = height;
+		help_pm = XCreatePixmap(e->dpy, win->xwin, help_w, help_h, e->depth);
+	}
+	XCopyArea(e->dpy, win->buf.pm, help_pm, gc, 0, 0, help_w, help_h, 0, 0);
+	XSetForeground(e->dpy, gc, win->bar_bg.pixel);
+	XFillRectangle(e->dpy, help_pm, gc, x, y, w, h);
+	XSetForeground(e->dpy, gc, win->bar_fg.pixel);
+	XSetLineAttributes(e->dpy, gc, 1, LineSolid, CapButt, JoinMiter);
+	XDrawRectangle(e->dpy, help_pm, gc, x, y, MAX(1, w) - 1, MAX(1, h) - 1);
+	draw = XftDrawCreate(e->dpy, help_pm, e->vis, e->cmap);
+	clip.x = x + 1;
+	clip.y = y + 1;
+	clip.width = MAX(2, w) - 2;
+	clip.height = MAX(2, h) - 2;
+	XftDrawSetClipRectangles(draw, 0, 0, &clip, 1);
+	left = x + pad;
+	top = y + pad + font->ascent;
+	width = MAX(pad * 2, w) - pad * 2;
+	keywidth = MIN(width / 3, 180);
+	rows = MAX(5, (h - pad * 2) / line) - 5;
+	help.page = MAX(1, rows);
+	help_scroll(&help, 0);
+	snprintf(buf, sizeof(buf), "Keyboard shortcuts - %s mode",
+	         help.mode == MODE_IMAGE ? "image" : "thumbnail");
+	help_text(win, draw, left, top, width, buf);
+	snprintf(buf, sizeof(buf), "Search: %s_", help.query);
+	/* Keep the insertion point visible even for a long query. */
+	for (i = 0; buf[i] != '\0' && TEXTWIDTH(win, buf + i, strlen(buf + i)) > width; i++)
+		;
+	help_text(win, draw, left, top + line, width, buf + i);
+	help_text(win, draw, left, top + line * 2, keywidth, "Shortcut");
+	help_text(win, draw, left + keywidth + pad, top + line * 2,
+	          width - keywidth - pad, "Action");
+	if (help.total == 0 && rows > 0)
+		help_text(win, draw, left, top + line * 3, width, "No matching shortcuts");
+	for (i = 0; i < rows && help.first + i < help.total; i++) {
+		row = &help.rows[help.matches[help.first + i]];
+		help_text(win, draw, left, top + line * (3 + i), keywidth, row->key);
+		help_text(win, draw, left + keywidth + pad, top + line * (3 + i),
+		          width - keywidth - pad, row->description);
+	}
+	snprintf(buf, sizeof(buf), "%d shortcuts | showing %d-%d", help.total,
+	         help.total == 0 || rows == 0 ? 0 : help.first + 1,
+	         rows == 0 ? 0 : MIN(help.total, help.first + rows));
+	help_text(win, draw, left, top + line * (3 + rows), width, buf);
+	help_text(win, draw, left, top + line * (4 + rows), width,
+	          "Esc close | Up/Down, PgUp/PgDn, wheel scroll | Ctrl+U clear");
+	XftDrawDestroy(draw);
+	return help_pm;
 }
 
 static void win_draw_bar(win_t *win)
@@ -513,10 +602,16 @@ static void win_draw_bar(win_t *win)
 
 void win_draw(win_t *win)
 {
+	Pixmap presented = win->buf.pm;
+
 	if (win->bar.h > 0)
 		win_draw_bar(win);
 
-	XSetWindowBackgroundPixmap(win->env.dpy, win->xwin, win->buf.pm);
+#if HAVE_LIBFONTS
+	if (help.active)
+		presented = win_draw_help(win);
+#endif
+	XSetWindowBackgroundPixmap(win->env.dpy, win->xwin, presented);
 	XClearWindow(win->env.dpy, win->xwin);
 	XFlush(win->env.dpy);
 }
