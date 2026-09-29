@@ -67,6 +67,9 @@ static void describe(const keymap_t *binding, char *buf, size_t size)
 	}
 	if (func == cg_zoom) {
 		snprintf(buf, size, "Zoom %s", arg > 0 ? "in" : "out");
+	} else if (func == ci_zoom_relative) {
+		snprintf(buf, size, "Zoom %s by a factor of %.2f", arg > 0 ? "in" : "out",
+		         1.0 + ABS((double)arg) / 100.0);
 	} else if (func == ci_set_zoom) {
 		snprintf(buf, size, "Set zoom to %d%%, or percentage given by count", arg);
 	} else if (func == ci_navigate || func == ci_navigate_frame || func == cg_navigate_marked) {

@@ -365,6 +365,11 @@ bool ci_set_zoom(arg_t zl)
 	return img_zoom_to(&img, (prefix ? prefix : zl) / 100.0);
 }
 
+bool ci_zoom_relative(arg_t percent)
+{
+	return img_zoom_relative(&img, percent);
+}
+
 bool ci_fit_to_win(arg_t sm)
 {
 	return img_fit_win(&img, sm);

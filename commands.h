@@ -41,6 +41,7 @@ bool ci_slideshow(arg_t);
 bool ci_toggle_alpha(arg_t);
 bool ci_toggle_animation(arg_t);
 bool ci_toggle_antialias(arg_t);
+bool ci_zoom_relative(arg_t);
 /* thumbnails mode */
 bool ct_move_sel(arg_t);
 bool ct_reload_all(arg_t);
@@ -89,6 +90,7 @@ bool ct_select(arg_t);
 #define i_toggle_alpha { ci_toggle_alpha, MODE_IMAGE }
 #define i_toggle_animation { ci_toggle_animation, MODE_IMAGE }
 #define i_toggle_antialias { ci_toggle_antialias, MODE_IMAGE }
+#define i_zoom_relative { ci_zoom_relative, MODE_IMAGE }
 
 /* thumbnails mode */
 #define t_move_sel { ct_move_sel, MODE_THUMB }

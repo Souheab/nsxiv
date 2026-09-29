@@ -192,15 +192,17 @@ static const keymap_t keys[] = {
 	{ 0,            XK_s,             i_slideshow,          None },
 };
 
-/* mouse button mappings for image mode: */
+/* mouse button mappings for image mode:
+ * i_zoom_relative uses a percentage step (negative reverses the factor).
+ */
 static const button_t buttons_img[] = {
 	/* modifiers    button            function              argument */
 	{ 0,            1,                i_cursor_navigate,    None },
 	{ ControlMask,  1,                i_drag,               DRAG_RELATIVE },
 	{ 0,            2,                i_drag,               DRAG_ABSOLUTE },
 	{ 0,            3,                g_switch_mode,        None },
-	{ 0,            4,                g_zoom,               +1 },
-	{ 0,            5,                g_zoom,               -1 },
+	{ 0,            4,                i_zoom_relative,      +10 },
+	{ 0,            5,                i_zoom_relative,      -10 },
 };
 
 /* mouse button mappings for thumbnail mode: */

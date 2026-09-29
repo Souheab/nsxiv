@@ -225,6 +225,7 @@ CLEANUP void img_close(img_t*, bool);
 void img_render(img_t*);
 bool img_fit_win(img_t*, scalemode_t);
 bool img_zoom(img_t*, int);
+bool img_zoom_relative(img_t*, int);
 bool img_zoom_to(img_t*, float);
 bool img_pos(img_t*, float, float);
 bool img_pan(img_t*, direction_t, int);

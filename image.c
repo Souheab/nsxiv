@@ -571,6 +571,18 @@ bool img_zoom(img_t *img, int d)
 	return img_zoom_to(img, zoom_levels[i] / 100);
 }
 
+bool img_zoom_relative(img_t *img, int percent)
+{
+	float factor = 1.0f + ABS((float)percent) / 100.0f;
+	float z = percent > 0 ? img->zoom * factor : img->zoom / factor;
+
+	if (percent == 0)
+		return false;
+	/* Reciprocal steps let reversing the wheel return to the same zoom. */
+	z = MIN(MAX(z, ZOOM_MIN), ZOOM_MAX);
+	return z != img->zoom && img_zoom_to(img, z);
+}
+
 bool img_pos(img_t *img, float x, float y)
 {
 	float ox, oy;
